@@ -1,4 +1,4 @@
-from mylib.lib import (
+from myLib.lib import (
     start_spark,
     end_spark,
     extract,

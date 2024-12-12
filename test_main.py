@@ -45,7 +45,11 @@ def test_query(spark):
     query(
         spark,
         df,
-        "SELECT airline, incidents_85_99 FROM AirlineSafety WHERE incidents_85_99 > 10",
+        (
+            "SELECT airline, incidents_85_99 "
+            "FROM AirlineSafety "
+            "WHERE incidents_85_99 > 10"
+        ),
         view_name,
     )
 
@@ -53,7 +57,11 @@ def test_query(spark):
     query(
         spark,
         df,
-        "SELECT airline, fatal_accidents_00_14 FROM AirlineSafety WHERE fatal_accidents_00_14 > 5",
+        (
+            "SELECT airline, fatal_accidents_00_14 "
+            "FROM AirlineSafety "
+            "WHERE fatal_accidents_00_14 > 5"
+        ),
         view_name,
     )
 
