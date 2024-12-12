@@ -1,43 +1,53 @@
-"""command-line interface (CLI) for the ETL (Extract, Transform, Load) process and querying."""
-import sys
-import argparse
-from myLib.extract import extract
-from myLib.transform_load import load_data
-from myLib.query import query
-
-
-def handle_arguments(args):
-    parser = argparse.ArgumentParser(description="ETL-Query script")
-    parser.add_argument(
-        "action",
-        choices=["extract", "load", "query"],
-    )
-
-    if "query" in args:
-        # Add an argument for a raw SQL query passed as a string
-        parser.add_argument(
-            "query", help="The SQL query to execute, passed as a string."
-        )
-
-    return parser.parse_args(args)
-
+from mylib.lib import (
+    start_spark,
+    end_spark,
+    extract,
+    load_data,
+    describe,
+    example_transform,
+    log_output,
+    reset_log,  # reset_log
+)
 
 def main():
-    args = handle_arguments(sys.argv[1:])
+    reset_log()  # Clear log at the beginning to avoid duplication
 
-    if args.action == "extract":
-        print("Extracting data...")
-        extract()
-    elif args.action == "load":
-        print("Transforming data...")
-        load_data()
-    elif args.action == "query":
-        print("Executing query...")
-        sql_query = args.query  # Capture the SQL query from the command line argument
-        query(sql_query)
-    else:
-        print(f"Unknown action: {args.action}")
+    # Step 1: Extract the data
+    extract()
 
+    # Step 2: Start Spark session
+    spark = start_spark("Airline_Safety_Analysis")
+
+    # Step 3: Load the data into a DataFrame
+    df = load_data(spark)
+
+    # Step 4: Describe the dataset
+    describe(df)
+
+    # Step 5: Run example SQL queries
+    run_query(spark, df, "incidents_85_99 > 10")
+    run_query(spark, df, "fatal_accidents_00_14 > 5")
+
+    # Step 6: Perform data transformation
+    example_transform(df)
+
+    # Step 7: End Spark session
+    end_spark(spark)
+
+def run_query(spark, df, condition):
+    """Filter the data based on a condition and log the results."""
+
+    df.createOrReplaceTempView("AirlineSafety")
+
+    query = f"SELECT * FROM AirlineSafety WHERE {condition}"
+    result = spark.sql(query)
+
+    log_output(
+        f"Results for condition: {condition}",
+        result.toPandas().to_markdown(),
+        query,
+    )
+    result.show(truncate=False)
 
 if __name__ == "__main__":
     main()

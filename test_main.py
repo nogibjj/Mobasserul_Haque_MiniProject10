@@ -1,72 +1,66 @@
-import subprocess
+"""
+Test suite for Airline Safety data analysis
+"""
 
+import os
+import pytest
+from lib import (
+    extract,
+    load_data,
+    describe,
+    query,
+    example_transform,
+    start_spark,
+    end_spark,
+)
+
+@pytest.fixture(scope="module")
+def spark():
+    """Fixture for initializing and stopping Spark session for tests"""
+    spark = start_spark("TestApp_Airline_Safety")
+    yield spark
+    end_spark(spark)
 
 def test_extract():
-    """Test extractData()"""
-    result = subprocess.run(
-        ["python", "main.py", "extract"],
-        capture_output=True,
-        text=True,
-        check=True,
+    """Test file extraction from URL"""
+    file_path = extract()
+    assert os.path.exists(file_path), "Extracted file does not exist."
+
+def test_load_data(spark):
+    """Test loading data into Spark DataFrame"""
+    df = load_data(spark)
+    assert df is not None, "Data loading failed: DataFrame is None."
+
+def test_describe(spark):
+    """Test generating statistical summary of data"""
+    df = load_data(spark)
+    describe(df)  # Expecting only successful execution
+
+def test_query(spark):
+    """Test querying records based on specific conditions"""
+    df = load_data(spark)
+    view_name = "AirlineSafety"
+
+    # Run query for incidents > 10 in 1985-1999
+    query(
+        spark,
+        df,
+        "SELECT airline, incidents_85_99 FROM AirlineSafety WHERE incidents_85_99 > 10",
+        view_name,
     )
-    assert (
-        result.returncode == 0
-    ), f"Extract failed with return code {result.returncode}"
-    assert (
-        "Extracting data..." in result.stdout
-    ), "Expected 'Extracting data...' in output"
-    print("Extract Test Passed!")
 
-
-def test_load():
-    """Test loadData()"""
-    result = subprocess.run(
-        ["python", "main.py", "load"],
-        capture_output=True,
-        text=True,
-        check=True,
+    # Run query for fatal accidents > 5 in 2000-2014
+    query(
+        spark,
+        df,
+        "SELECT airline, fatal_accidents_00_14 FROM AirlineSafety WHERE fatal_accidents_00_14 > 5",
+        view_name,
     )
 
-    if result.returncode != 0:
-        print(f"Load failed with return code {result.returncode}")
-        print(f"Error output: {result.stderr}")  # Print the error output
-        assert result.returncode == 0  # Reassert to ensure the test fails
-
-    assert (
-        "Loading data to Databricks..." in result.stdout
-    ), "Expected 'Loading data to Databricks...' in output"
-    print("Load Test Passed!")
-
-
-def test_general_query():
-    """Test general_query() with a complex SQL query"""
-    query_string = """
-        SELECT 
-            rg.Major, 
-            rg.Employed AS Undergrad_Employed, 
-            gs.Grad_employed AS Grad_Employed,
-            rg.Unemployment_rate AS Undergrad_Unemployment_Rate,
-            gs.Grad_unemployment_rate AS Grad_Unemployment_Rate,
-            (gs.Grad_median - rg.Median) AS Salary_Premium
-        FROM RecentGradsDB rg
-        JOIN GradStudentsDB gs ON rg.Major_code = gs.Major_code
-        WHERE rg.Unemployment_rate < 0.05  
-          AND gs.Grad_unemployment_rate < 0.05  
-        ORDER BY Salary_Premium DESC
-        LIMIT 5;
-    """
-
-    result = subprocess.run(
-        ["python", "main.py", "query", query_string],
-        capture_output=True,
-        text=True,
-        check=True,
-    )
-    assert result.returncode == 0
-    print("General Query Test Passed!")
-
+def test_example_transform(spark):
+    """Test that example_transform runs and modifies the DataFrame"""
+    df = load_data(spark)
+    example_transform(df)  # Expecting only successful execution
 
 if __name__ == "__main__":
-    test_extract()
-    test_load()
-    test_general_query()
+    pytest.main()
