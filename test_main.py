@@ -4,7 +4,7 @@ Test suite for Airline Safety data analysis
 
 import os
 import pytest
-from lib import (
+from myLib.lib import (
     extract,
     load_data,
     describe,
