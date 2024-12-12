@@ -35,10 +35,10 @@ def end_spark(spark):
 
 def extract(
     url="https://raw.githubusercontent.com/fivethirtyeight/data/master/airline-safety/airline-safety.csv",
-    file_path="/dbfs/data/airline-safety.csv",
-    directory="/dbfs/data",
+    file_path="data/airline-safety.csv",
+    directory="data",
 ):
-    """Extracts a CSV from a URL and saves it to DBFS."""
+    """Extracts a CSV from a URL and saves it locally."""
     if not os.path.exists(directory):
         os.makedirs(directory)
     with requests.get(url) as r:
@@ -46,9 +46,8 @@ def extract(
             f.write(r.content)
     return file_path
 
-def load_data(spark, data="dbfs:/data/airline-safety.csv", name="AirlineSafety"):
+def load_data(spark, data="data/airline-safety.csv", name="AirlineSafety"):
     """Loads the airline safety dataset and selects specific columns."""
-    print(f"Loading data from: {data}")  # Debugging log
     df = spark.read.option("header", "true").csv(data)
     df = df.select(
         "airline",
